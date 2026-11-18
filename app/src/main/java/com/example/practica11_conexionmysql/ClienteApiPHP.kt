@@ -8,86 +8,79 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 
-//Controlador para conectar con la base de datos en el server MySQL y definicion de las funciones
-//para cada operacion del CRUD
+// Controlador para conectar con la base de datos MySQL en el servidor web (Vehículos Deportivos)
 class ClienteApiPHP {
-    // IP de servidor MYSQL (Aqui debo de colocar la que corresponda a mi servidor web)
-    //En realidad aqui puse la IP actual de mi PC
+    // IP del servidor web (actualizada por el usuario)
     var ipServidor: String = "192.168.100.17"
-    //definicion de la URL con el nombre de la empresa
+
+    // URL base apuntando a la carpeta del proyecto en htdocs de XAMPP
     private val baseUrl: String
         get() = "http://$ipServidor/megatronsports_practica11_movilesII"
 
     /**
-     * Función genérica para enviar peticiones HTTP POST con parámetros en el
-    cuerpo (Body).
+     * Función genérica para enviar peticiones HTTP POST con parámetros en el cuerpo (Body).
      */
-    private suspend fun realizarPeticionPost(urlPath: String, parametros:
-    Map<String, String>): String = withContext(Dispatchers.IO) {
+    private suspend fun realizarPeticionPost(urlPath: String, parametros: Map<String, String>): String = withContext(Dispatchers.IO) {
         try {
             val url = URL(urlPath)
             val conexion = url.openConnection() as HttpURLConnection
             conexion.requestMethod = "POST"
-            conexion.doOutput = true // Habilita la conexión para enviar datos en el cuerpo
-                    conexion.connectTimeout = 5000
+            conexion.doOutput = true
+            conexion.connectTimeout = 5000
             conexion.readTimeout = 5000
 
             conexion.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
 
-            // Formatear los parámetros en formato clave1=valor1&clave2=valor2
             val datosCuerpo = parametros.map { (clave, valor) ->
-
-            "${URLEncoder.encode(clave, "UTF-8")}=${URLEncoder.encode(valor, "UTF-8")}"
-
+                "${URLEncoder.encode(clave, "UTF-8")}=${URLEncoder.encode(valor, "UTF-8")}"
             }.joinToString("&")
 
-            // Escribir los datos en el cuerpo de la petición HTTP
             conexion.outputStream.use { os ->
                 os.write(datosCuerpo.toByteArray(Charsets.UTF_8))
             }
 
-            // Lectura de la respuesta del servidor
             if (conexion.responseCode == HttpURLConnection.HTTP_OK) {
-                val respuesta = conexion.inputStream.bufferedReader().use {
-                    it.readText() }
+                val respuesta = conexion.inputStream.bufferedReader().use { it.readText() }
                 conexion.disconnect()
                 respuesta
             } else {
                 conexion.disconnect()
                 "Error: ${conexion.responseCode}"
             }
-            } catch (e: Exception) {
-                "Error de red: ${e.message}"
-            }
-        }//realizarPeticionPost
+        } catch (e: Exception) {
+            "Error de red: ${e.message}"
+        }
+    }
 
-    //⁜⁜⁜Funcion para registrar empleados⁜⁜⁜
-    suspend fun registrarEmpleado(empleado: Empleado): String {
-        //Instrucciones para uso de metodo POST
+    // Registrar Vehículo
+    suspend fun registrarVehiculo(vehiculo: Vehiculo): String {
         val url = "$baseUrl/registrar_post.php"
         val parametros = mapOf(
-            "numemp" to empleado.numEmp.toString(),
-            "nombre" to empleado.nombre,
-            "apellidos" to empleado.apellidos,
-            "sueldo" to empleado.sueldo.toString()
+            "id_vehiculo" to vehiculo.idVehiculo.toString(),
+            "marca" to vehiculo.marca,
+            "modelo" to vehiculo.modelo,
+            "anio" to vehiculo.anio.toString(),
+            "precio" to vehiculo.precio.toString(),
+            "caballos_de_fuerza" to vehiculo.caballosDeFuerza.toString()
         )
         return realizarPeticionPost(url, parametros)
     }
 
-    //⁜⁜⁜Funcion para buscar empleados⁜⁜⁜
-    suspend fun buscarEmpleado(numEmp: Int): Empleado? {
-        //Instrucciones para uso de metodo POST
+    // Buscar Vehículo
+    suspend fun buscarVehiculo(idVehiculo: Int): Vehiculo? {
         val url = "$baseUrl/buscar_post.php"
-        val parametros = mapOf("numemp" to numEmp.toString())
+        val parametros = mapOf("id_vehiculo" to idVehiculo.toString())
         val respuesta = realizarPeticionPost(url, parametros)
         return try {
             if (respuesta != "No encontrado" && !respuesta.startsWith("Error")) {
                 val json = JSONObject(respuesta)
-                Empleado(
-                    numEmp = json.getInt("numemp"),
-                    nombre = json.getString("nombre"),
-                    apellidos = json.getString("apellidos"),
-                    sueldo = json.getDouble("sueldo")
+                Vehiculo(
+                    idVehiculo = json.getInt("id_vehiculo"),
+                    marca = json.getString("marca"),
+                    modelo = json.getString("modelo"),
+                    anio = json.getInt("anio"),
+                    precio = json.getDouble("precio"),
+                    caballosDeFuerza = json.getInt("caballos_de_fuerza")
                 )
             } else {
                 null
@@ -97,49 +90,49 @@ class ClienteApiPHP {
         }
     }
 
-    //⁜⁜⁜Funcion para actualizar empleados⁜⁜⁜
-    suspend fun actualizarEmpleado(empleado: Empleado): String {
-        //Instrucciones para uso de metodo POST
+    // Actualizar Vehículo
+    suspend fun actualizarVehiculo(vehiculo: Vehiculo): String {
         val url = "$baseUrl/actualizar_post.php"
         val parametros = mapOf(
-            "numemp" to empleado.numEmp.toString(),
-            "nombre" to empleado.nombre,
-            "apellidos" to empleado.apellidos,
-            "sueldo" to empleado.sueldo.toString()
+            "id_vehiculo" to vehiculo.idVehiculo.toString(),
+            "marca" to vehiculo.marca,
+            "modelo" to vehiculo.modelo,
+            "anio" to vehiculo.anio.toString(),
+            "precio" to vehiculo.precio.toString(),
+            "caballos_de_fuerza" to vehiculo.caballosDeFuerza.toString()
         )
         return realizarPeticionPost(url, parametros)
     }
 
-    //⁜⁜⁜Funcion para eliminar empleados⁜⁜⁜
-    suspend fun eliminarEmpleado(numEmp: Int): String {
-        //Instrucciones para uso de metodo POST
+    // Eliminar Vehículo
+    suspend fun eliminarVehiculo(idVehiculo: Int): String {
         val url = "$baseUrl/eliminar_post.php"
-        val parametros = mapOf("numemp" to numEmp.toString())
+        val parametros = mapOf("id_vehiculo" to idVehiculo.toString())
         return realizarPeticionPost(url, parametros)
     }
 
-    //⁜⁜⁜Funcion para mostrar empleados⁜⁜⁜
-    suspend fun obtenerEmpleados(): List<Empleado> {
-        //Instrucciones para uso de metodo POST
+    // Listar Vehículos
+    suspend fun obtenerVehiculos(): List<Vehiculo> {
         val url = "$baseUrl/listar.php"
-        // Para listar podemos enviar un mapa vacío
         val respuesta = realizarPeticionPost(url, emptyMap())
-        val lista = mutableListOf<Empleado>()
+        val lista = mutableListOf<Vehiculo>()
         try {
             if (!respuesta.startsWith("Error")) {
                 val jsonArray = JSONArray(respuesta)
                 for (i in 0 until jsonArray.length()) {
                     val json = jsonArray.getJSONObject(i)
                     lista.add(
-                        Empleado(
-                            numEmp = json.getInt("numemp"),
-                            nombre = json.getString("nombre"),
-                            apellidos = json.getString("apellidos"),
-                            sueldo = json.getDouble("sueldo")
+                        Vehiculo(
+                            idVehiculo = json.getInt("id_vehiculo"),
+                            marca = json.getString("marca"),
+                            modelo = json.getString("modelo"),
+                            anio = json.getInt("anio"),
+                            precio = json.getDouble("precio"),
+                            caballosDeFuerza = json.getInt("caballos_de_fuerza")
                         )
                     )
-                }//for
-            }//if
+                }
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }

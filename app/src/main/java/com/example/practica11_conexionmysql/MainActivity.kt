@@ -4,26 +4,63 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.runtime.*
 import com.example.practica11_conexionmysql.ui.theme.Practica11_ConexionMySQLTheme
 
-private val clienteApi = ClienteApiPHP()
 class MainActivity : ComponentActivity() {
+    private val clienteApi = ClienteApiPHP()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             Practica11_ConexionMySQLTheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
-                    PantallaPrincipalTabs(clienteApi = clienteApi)
+                    var currentScreen by remember { mutableStateOf("login") } // "login", "gestion", "listado"
+                    var mostrarDialogoIP by remember { mutableStateOf(false) }
+                    var ipConfigurada by remember { mutableStateOf(clienteApi.ipServidor) }
+
+                    if (mostrarDialogoIP) {
+                        DialogoConfiguracionIP(
+                            ipActual = ipConfigurada,
+                            onGuardarIP = { nuevaIP ->
+                                clienteApi.ipServidor = nuevaIP
+                                ipConfigurada = nuevaIP
+                                mostrarDialogoIP = false
+                            },
+                            onDismiss = {
+                                mostrarDialogoIP = false
+                            }
+                        )
+                    }
+
+                    when (currentScreen) {
+                        "login" -> PantallaLogin(
+                            onLoginSuccess = {
+                                currentScreen = "gestion"
+                            },
+                            onConfigurarIpClick = {
+                                mostrarDialogoIP = true
+                            }
+                        )
+                        "gestion" -> PantallaGestionVehiculo(
+                            clienteApi = clienteApi,
+                            onIrAlListado = {
+                                currentScreen = "listado"
+                            },
+                            onCerrarSesion = {
+                                currentScreen = "login"
+                            }
+                        )
+                        "listado" -> PantallaListadoVehiculo(
+                            clienteApi = clienteApi,
+                            onVolverAlFormulario = {
+                                currentScreen = "gestion"
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -61,4 +98,22 @@ Ademas, el movil y la PC deben de estar en la misma red wifi.
 Finalmente, al iniciar la app, debe de ingresarse la IP actual de la PC, se gestionana archivos
 y en la consola de mysql de xampp se verifica con
 select * from empleado;
+* */
+
+
+/*
+Para la practica completa use la misma base de datos y cree una nueva tabla:
+USE megatronsports_practica11_movilesII;
+CREATE TABLE IF NOT EXISTS vehiculo (
+    id_vehiculo INT PRIMARY KEY,
+    marca VARCHAR(100) NOT NULL,
+    modelo VARCHAR(100) NOT NULL,
+    anio INT NOT NULL,
+    precio DECIMAL(10,2) NOT NULL,
+    caballos_de_fuerza INT NOT NULL
+);
+-- Para verificar la estructura:
+DESCRIBE vehiculo;
+
+y ademas, actualice los archivos php para aceptar los nuevos campos (comente lo otro)
 * */
